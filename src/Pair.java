@@ -13,11 +13,13 @@ public class Pair {
 	// List of values associated with the key
 	List<String> values;
 	
+	// For creating internal nodes
 	public Pair(int key) {
 		this.key = key;
 		this.values = new ArrayList<String>();
 	}
 	
+	// For creating external nodes
 	public Pair(int key, String value) {
 		this.key = key;
 		

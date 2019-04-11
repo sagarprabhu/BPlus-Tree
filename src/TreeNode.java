@@ -34,7 +34,7 @@ public class TreeNode {
 	public TreeNode() {
 		this.pairs = new ArrayList<>();
 		this.children = new ArrayList<>();
-		this.prev = this.next =  null;
+		this.prev = this.next = null;
 	}
 	
 	/**
