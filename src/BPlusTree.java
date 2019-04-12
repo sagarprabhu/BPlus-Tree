@@ -83,19 +83,19 @@ public class BPlusTree {
 	public int binarySearch(List<Pair> pairs, int target) {
 		int start= 0;
 		int end = pairs.size() -1;
-		
+
 		// if target is less than first key
-		if(target < pairs.get(0).key)
+		if(target < pairs.get(0).key) {
 			return 0;
-		
+		}
 		// if target is greater than last key
-		if(target >= pairs.get(end).key)
+		if(target >= pairs.get(end).key) {
 			return pairs.size();
-		
+		}
+
 		while(start <= end) {
 			
-			int mid =(start+end)/2;
-			
+			int mid =(int) Math.ceil((start+end)/2.0);  //if pairs.size()==2 
 			if(target >= pairs.get(mid-1).key && target < pairs.get(mid).key)
 				return mid; 
 			
@@ -113,7 +113,7 @@ public class BPlusTree {
 	 * @param value
 	 */
 	public void insert(int key, String value) {
-		
+		System.out.println("Insert: "+key+" "+value);
 		// if tree is not initialized
 		if(this.root == null) {
 			TreeNode node = new TreeNode();
@@ -136,7 +136,7 @@ public class BPlusTree {
 			
 			// split overfull leaf node
 			if(currNode.pairs.size() == this.m)
-				splitLeafNode(currNode); 
+				splitLeafNode(currNode);
 		}
 	}
 	
@@ -213,8 +213,8 @@ public class BPlusTree {
 			mergeInternal(newNode,currNode);
 			// if internal node becomes full, perform split again
 			if(currNode.getPairs().size()== this.m) {
-				int mid = (int)Math.ceil(this.m / 2) -1;
-				
+				int mid = (int)Math.ceil(this.m / 2.0) -1;
+
 				TreeNode middleNode = new TreeNode();
 				TreeNode rightNode = new TreeNode();
 				
@@ -244,11 +244,10 @@ public class BPlusTree {
 				}
 				rightNode.children = rightChildren;
 				
-				
+
 				// update the curr overfull node: remove Pairs >=m from current node 
 		 		currNode.getPairs().subList(mid, size).clear();
 		 		currNode.children.subList(leftLastIndex+1, currChildren.size()).clear();
-		 		
 		 		// propagate split upwards
 		 		splitInternalNode(currNode.parent, currNode,middleNode,false);
 			}

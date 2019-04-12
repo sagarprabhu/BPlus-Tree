@@ -46,6 +46,6 @@ public class Pair {
 	}
 
 	public String toString() {
-		return "(" + key +",[" + values + "])";
+		return "(" + key +"," + values + ")";
 	}
 }
