@@ -6,10 +6,14 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Scanner;
-
+/**
+ * 
+ * @author sagar prabhu
+ *
+ */
 public class InputOutput {
 	
-		private static final String RESULT_NOT_FOUND = "Null";
+		private static final String SEARCH_FAILED = "Null";
 
 		private static final String OUTPUT_FILENAME = "output_file.txt";
 
@@ -19,23 +23,26 @@ public class InputOutput {
 		 */
 		public static void main(String args[]) {
 
-			// Read name of input file from command line argument
-			String fileName = args[0];
-			File inputFile = new File(fileName);
+			// Read name of input file from the command line argument
+			File inputFile = new File(args[0]);
 			try {
 				Scanner sc = new Scanner(inputFile);
-				// For creating output file
-				BufferedWriter bw = openNewFile();
 				
-				String newLine = sc.nextLine();
+				// Creating a new file to write output to (output_file.txt)
+				File file = new File(OUTPUT_FILENAME);
+				BufferedWriter bw = new BufferedWriter(new FileWriter(file));
+
+				
+				String line = sc.nextLine();
 				// splitting input file line based on regex
-				String[] input = newLine.split("\\(|,|\\)");
+				String[] input = line.split("\\(|,|\\)");
 				
 				BPlusTree tree = new BPlusTree(Integer.parseInt(input[1]));
 			
 				while (sc.hasNextLine()) {
-					newLine = sc.nextLine();
-					input = newLine.split("\\(|,|\\)");
+					line = sc.nextLine();
+					input = line.split("\\(|,|\\)");
+			//		System.out.println(input[0]);
 					switch (input[0].trim()) {
 						case "Insert": {
 							tree.insert(Integer.parseInt(input[1].trim()), input[2].trim());
@@ -61,93 +68,70 @@ public class InputOutput {
 					}
 
 				}
-				// closing scanner and buffered writer
-				sc.close();
+				// closing buffered writer and scanner
 				bw.close();
+				sc.close();
 			} catch (FileNotFoundException e) {
-				// LOGGER.severe("File is not found");
-				System.out.println("Error: File not found with name: " + fileName);
-				e.printStackTrace();
+				System.out.println("Error: File with name: "+args[0]+" does not exist");
 			} catch (IOException e) {
 				System.out.println("Error: Failed to create new file");
-				e.printStackTrace();
 			} catch (NumberFormatException e) {	
-				System.out.println("Enter valid degree");
-				e.printStackTrace();
+				System.out.println(e);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		}
 
 		/**
-		 * Open new file to which output has to be written to.
-		 *
-		 * @return the buffered writer
-		 * @throws IOException
-		 *             Signals that an I/O exception has occurred.
-		 */
-		private static BufferedWriter openNewFile() throws IOException {
-			// Creating a new file to write output to (output_file.txt)
-			File file = new File(OUTPUT_FILENAME);
-			BufferedWriter bw = new BufferedWriter(new FileWriter(file));
-			return bw;
-		}
-
-		/**
-		 * Write search by key result to the output file.
+		 * Write search result to the output file.
 		 *
 		 * @param res the list of values to be written
 		 * @param bw the BufferedWriter object
-		 * @throws IOExceptio Signals that an I/O exception has occurred.
+		 * @throws IOException 
 		 */
-		private static void writeSearch(List<String> res, BufferedWriter bw) throws IOException {
+		private static void writeSearch(List<String> result, BufferedWriter bw) throws IOException {
 			String newLine = "";
-			if (res == null) {
-				// if no values are found for key
-				bw.write(RESULT_NOT_FOUND);
-			} else {
+			if (result != null){
 				// if values are found, write to file in given format
-				Iterator<String> valueIterator = res.iterator();
-				while (valueIterator.hasNext()) {
-					newLine = newLine + valueIterator.next() + ", ";
+				Iterator<String> itr = result.iterator();
+				while (itr.hasNext()) {
+					newLine = newLine + itr.next() + ",";
 				}
-				bw.write(newLine.substring(0, newLine.length() - 2));
+				bw.write(newLine.substring(0, newLine.length() -1));
+			}else{
+				// if no values are found for key
+				bw.write(SEARCH_FAILED);
 			}
 			bw.newLine();
 
 		}
 
 		/**
-		 * Write search by keys result to the output file.
-		 *
-		 * @param res
-		 *            the list of key value pairs to be written
-		 * @param bw
-		 *            the BufferedWriter object
+		 * Write Range search result to the output file.
+		 * @param res List of values to be written
+		 * @param bw BufferedWriter object
 		 * @throws IOException
-		 *             Signals that an I/O exception has occurred.
 		 */
-		private static void writeRangeSearch(List<Pair> res, BufferedWriter bw) throws IOException {
+		private static void writeRangeSearch(List<Pair> result, BufferedWriter bw) throws IOException {
 			String newLine = "";
-			if (res.isEmpty()) {
-				// if no values are found between given keys
-				bw.write(RESULT_NOT_FOUND);
-			} else {
+			if (result != null){
 				// if pairs are found, write to file in given format
-				Iterator<Pair> keyIterator = res.iterator();
-				Iterator<String> valueIterator;
-				Pair key;
-				while (keyIterator.hasNext()) {
-					key = keyIterator.next();
-					valueIterator = key.getValues().iterator();
-					while (valueIterator.hasNext()) {
-						newLine = newLine + "(" + key.key + "," + valueIterator.next() + "), ";
+				Iterator<Pair> pairIterator = result.iterator();
+				Iterator<String> itr;
+				Pair pair;
+				while (pairIterator.hasNext()) {
+					pair = pairIterator.next();
+					itr = pair.getValues().iterator();
+					while (itr.hasNext()) {
+						newLine = newLine + itr.next() + ",";
 					}
 				}
-				bw.write(newLine.substring(0, newLine.length() - 2));
+				bw.write(newLine.substring(0, newLine.length() - 1));
+			}else {
+				// if no values are found between given keys
+				bw.write(SEARCH_FAILED);
 			}
 			bw.newLine();
-
 		}
 
 }

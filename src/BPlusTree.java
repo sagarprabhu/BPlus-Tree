@@ -7,7 +7,7 @@ import java.util.List;
  * 
  */
 public class BPlusTree {
-
+	// order of the tree
 	int m;
 	
 	TreeNode root;
@@ -19,7 +19,6 @@ public class BPlusTree {
 	public BPlusTree(int m) {
 		this.m = m;
 		root = null;
-		// System.out.println("B+ Tree Initialized. Degree is " + m);
 	}
 	
 	/**
@@ -300,11 +299,19 @@ public class BPlusTree {
 	 * @param key
 	 */
 	public void delete(int key) {
-		deleteUtil(null,this.root,key);
-		if(this.root.getPairs().size()==0)
+		
+		deleteUtil(null, this.root, key);
+
+		if (this.root.getPairs().size() == 0)
 			this.root = null;
 	}
-	
+	/**
+	 * Recursive method to delete the pair in leaf
+	 * @param parent
+	 * @param node
+	 * @param key
+	 * @return index of pair to be deleted in parent, else -1 
+	 */
 	public int deleteUtil(TreeNode parent, TreeNode node,int key) {
 		int indexToDelete = -1;
 		
@@ -335,21 +342,20 @@ public class BPlusTree {
 			}else {
 				return -1; // no underflow 
 			}
+			
 		}else { // if node is an internal node
-			// traverse to leaf
-			while(node.children.size()!=0) 
-				node = node.children.get(binarySearch(node.getPairs(),key));
-			indexToDelete = deleteUtil(node.parent,node,key);
+		 
+			indexToDelete = deleteUtil(node,node.children.get( binarySearch(node.getPairs(), key)), key);
 		}
 		// check if index node remaining
 		if (indexToDelete != -1){
-			if (node == this.root ) {
-				
-				node.getPairs().remove(indexToDelete);
-				if(node.getPairs().size()==0)
-					this.root = this.root.children.get(0);
-				
-				return -1; 
+			if (node == this.root ) { //base case
+				root.getPairs().remove(indexToDelete);
+				if (root.getPairs().size() == 0){
+					root = root.children.get(0);
+					root.parent = null; // update parent
+				}
+				return -1;	
 			}
 			node.getPairs().remove(indexToDelete);
 			
@@ -357,14 +363,13 @@ public class BPlusTree {
 			if (node.getPairs().size()< Math.ceil(this.m/2.0)-1){
 				// determine if node has left sibling 
 
-				// check to see if indexNode has sibling
 				if (indexInParent - 1 >= 0){
 					TreeNode left = parent.children.get(indexInParent - 1);  
-					return handleIndexUnderflow(left, node, parent);  
+					return handleInternalUnderflow(left, node, parent);  
 
 				} else {
 					TreeNode right = parent.children.get(indexInParent + 1);  
-					return handleIndexUnderflow(node, right, parent);  
+					return handleInternalUnderflow(node, right, parent);  
 				}
 			}
 		}
@@ -375,24 +380,26 @@ public class BPlusTree {
 	 * @param left 
 	 * @param right 
 	 * @param parent Parent of left and right
-	 * @return
+	 * @return index of node to be deleted in parent in case of merge, else -1 in case of redistribution
 	 */
 	public int handleLeafUnderflow(TreeNode left, TreeNode right, TreeNode parent) {
+		
+		int indexInParent = parent.children.indexOf(left);
 		
 		// merge
 		if(left.getPairs().size() + right.getPairs().size() <= this.m-1) {
 			left.getPairs().addAll(right.getPairs());
+			
 			// change pointers
 			left.next = right.next;
-			right.next.prev = left;
+			if(right.next!= null) // if right is not the rightmost node
+				right.next.prev = left;
 			
 			// delete right node
-			int indexInParent = parent.children.indexOf(right);
-			parent.children.remove(indexInParent);
-			return indexInParent -1; 
+			parent.children.remove(indexInParent+1);
+			return indexInParent; 
 		}
 		// redistribute
-		int index = parent.children.indexOf(right);
 		if(left.getPairs().size() < Math.ceil(this.m/2.0)-1) { // if left is underflowed
 			// get the minimum key value of right
 			left.getPairs().add(right.getPairs().remove(0));
@@ -401,26 +408,39 @@ public class BPlusTree {
 			right.getPairs().add(0, left.getPairs().remove(left.getPairs().size()-1));
 		}
 		// update parent's key
-		parent.getPairs().get(index-1).key = right.getPairs().get(0).key;
+		parent.getPairs().get(indexInParent).key = right.getPairs().get(0).key;
 		
 		return -1;
 	}
-	public int handleIndexUnderflow(TreeNode left,TreeNode right, TreeNode parent) {
+	/**
+	 * Handle merge/redistribution of keys in Internal nodes
+	 * @param left
+	 * @param right
+	 * @param parent Parent node of left and right nodes
+	 * @return index of key to be deleted in parent in case of merge, else -1 in case of redistribution
+	 */
+	public int handleInternalUnderflow(TreeNode left,TreeNode right, TreeNode parent) {
 		
 		int indexInParent = parent.children.indexOf(left);
 		// key separating left and right
 		int middleKey = parent.getPairs().get(indexInParent).key;
 		
-		// merge
-		if(left.getPairs().size() + right.getPairs().size() <= this.m-1) {
+		// check merge condition
+		if(left.getPairs().size() + 1 + right.getPairs().size() <= this.m-1) {
 			
 			left.getPairs().add(new Pair(middleKey));
 			left.getPairs().addAll(right.getPairs());
 			
 			left.children.addAll(right.children);
 			
+			// ***set parent pointers of right.children to left
+			for(int i=0; i< right.children.size(); i++) {
+				right.children.get(i).parent = left;
+			}
+			
 			// delete right node
 			parent.children.remove(indexInParent+1);
+			
 			return indexInParent; 
 		}
 		
@@ -429,21 +449,27 @@ public class BPlusTree {
 			// move middle key to left node
 			left.getPairs().add(new Pair(middleKey));
 			
-			//move leftmost key from right node to parent
-			parent.getPairs().add(indexInParent,right.getPairs().remove(0));
+			//move leftmost key from right node and replace with parent's middle key
+			parent.getPairs().set(indexInParent,right.getPairs().remove(0));
 			
 			//move leftmost child from right node to left node
 			left.children.add(right.children.remove(0));
+			
+			//update corresponding parent pointer
+			left.children.get(left.children.size()-1).parent = left;
 			
 		}else { // if right is underflowed
 			// move middle key to right node
 			right.getPairs().add(0, new Pair(middleKey));
 			
-			// move rightmost key from left to parent
-			parent.getPairs().add(indexInParent, left.getPairs().remove(left.getPairs().size()-1));
+			// move rightmost key from left and replace with parent's middle key
+			parent.getPairs().set(indexInParent, left.getPairs().remove(left.getPairs().size()-1));
 			
 			// move rightmost child from left node to right node
 			right.children.add(0, left.children.remove(left.children.size()-1));
+			
+			//update parent pointer
+			right.children.get(0).parent = right;
 		}
 		
 		return -1;
