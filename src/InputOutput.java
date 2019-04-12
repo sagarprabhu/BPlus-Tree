@@ -36,18 +36,21 @@ public class InputOutput {
 				while (sc.hasNextLine()) {
 					newLine = sc.nextLine();
 					input = newLine.split("\\(|,|\\)");
-
-					switch (input[0]) {
+					switch (input[0].trim()) {
 						case "Insert": {
-							tree.insert(Integer.parseInt(input[1]), input[2]);
+							tree.insert(Integer.parseInt(input[1].trim()), input[2].trim());
+							break;
+						}
+						case "Delete": {
+							tree.delete(Integer.parseInt(input[1].trim()));
 							break;
 						}
 						case "Search": {
-							
 							if (input.length == 2) {
 								List<String> res = tree.search(Integer.parseInt(input[1].trim()));
 								writeSearch(res, bw);
 							} 
+
 							// Range Search
 							else {
 								List<Pair> res = tree.search(Integer.parseInt(input[1].trim()),Integer.parseInt(input[2].trim()));

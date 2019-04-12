@@ -75,7 +75,7 @@ public class BPlusTree {
 	}
 	
 	/**
-	 * Binary search used for searching the key
+	 * Binary search used for searching the key in Internal nodes
 	 * @param pairs List of pairs
 	 * @param target Key to be searched
 	 * @return The first index at which the target key is less than list of keys
@@ -95,7 +95,7 @@ public class BPlusTree {
 
 		while(start <= end) {
 			
-			int mid =(int) Math.ceil((start+end)/2.0);  //if pairs.size()==2 
+			int mid =(int) Math.ceil((start+end)/2.0);  //if pairs.size() = 2 i.e. for m=3
 			if(target >= pairs.get(mid-1).key && target < pairs.get(mid).key)
 				return mid; 
 			
@@ -104,7 +104,7 @@ public class BPlusTree {
 			else
 				end = mid -1;
 		}
-		return -1;
+		return -1; // dummy return
 	}
 	
 	/**
@@ -113,7 +113,6 @@ public class BPlusTree {
 	 * @param value
 	 */
 	public void insert(int key, String value) {
-		System.out.println("Insert: "+key+" "+value);
 		// if tree is not initialized
 		if(this.root == null) {
 			TreeNode node = new TreeNode();
@@ -296,7 +295,158 @@ public class BPlusTree {
 		}
 	}
 	
+	/**
+	 * Delete dictionary pair with the given key
+	 * @param key
+	 */
+	public void delete(int key) {
+		deleteUtil(null,this.root,key);
+		if(this.root.getPairs().size()==0)
+			this.root = null;
+	}
 	
-	
-	
+	public int deleteUtil(TreeNode parent, TreeNode node,int key) {
+		int indexToDelete = -1;
+		
+		// finding index of node in its parent
+		int indexInParent = -1;
+		if(parent!=null)
+			indexInParent = parent.children.indexOf(node);
+		
+		// if node is leaf
+		if(node.children.size() ==0) {
+			for(int i=0; i< node.getPairs().size();i++) 
+				if(node.getPairs().get(i).key == key) { 
+					// delete key-value pair
+					node.getPairs().remove(i);
+					break;
+				}
+			
+			// check for underflow
+			if(node.getPairs().size()< Math.ceil(this.m/2.0)-1 && node != this.root) {
+				if(indexInParent -1 >=0) {
+					// node has left sibling
+					TreeNode left = parent.children.get(indexInParent-1);
+					return handleLeafUnderflow(left,node,parent);
+				}else {
+					TreeNode right = parent.children.get(indexInParent+1);
+					return handleLeafUnderflow(node,right,parent);
+				}
+			}else {
+				return -1; // no underflow 
+			}
+		}else { // if node is an internal node
+			// traverse to leaf
+			while(node.children.size()!=0) 
+				node = node.children.get(binarySearch(node.getPairs(),key));
+			indexToDelete = deleteUtil(node.parent,node,key);
+		}
+		// check if index node remaining
+		if (indexToDelete != -1){
+			if (node == this.root ) {
+				
+				node.getPairs().remove(indexToDelete);
+				if(node.getPairs().size()==0)
+					this.root = this.root.children.get(0);
+				
+				return -1; 
+			}
+			node.getPairs().remove(indexToDelete);
+			
+			// if removal caused underflow 
+			if (node.getPairs().size()< Math.ceil(this.m/2.0)-1){
+				// determine if node has left sibling 
+
+				// check to see if indexNode has sibling
+				if (indexInParent - 1 >= 0){
+					TreeNode left = parent.children.get(indexInParent - 1);  
+					return handleIndexUnderflow(left, node, parent);  
+
+				} else {
+					TreeNode right = parent.children.get(indexInParent + 1);  
+					return handleIndexUnderflow(node, right, parent);  
+				}
+			}
+		}
+		return -1;
+	}
+	/**
+	 * Handle merge/redistribution in leaf
+	 * @param left 
+	 * @param right 
+	 * @param parent Parent of left and right
+	 * @return
+	 */
+	public int handleLeafUnderflow(TreeNode left, TreeNode right, TreeNode parent) {
+		
+		// merge
+		if(left.getPairs().size() + right.getPairs().size() <= this.m-1) {
+			left.getPairs().addAll(right.getPairs());
+			// change pointers
+			left.next = right.next;
+			right.next.prev = left;
+			
+			// delete right node
+			int indexInParent = parent.children.indexOf(right);
+			parent.children.remove(indexInParent);
+			return indexInParent -1; 
+		}
+		// redistribute
+		int index = parent.children.indexOf(right);
+		if(left.getPairs().size() < Math.ceil(this.m/2.0)-1) { // if left is underflowed
+			// get the minimum key value of right
+			left.getPairs().add(right.getPairs().remove(0));
+		}else { // if right is underflowed
+			// get max key value of left
+			right.getPairs().add(0, left.getPairs().remove(left.getPairs().size()-1));
+		}
+		// update parent's key
+		parent.getPairs().get(index-1).key = right.getPairs().get(0).key;
+		
+		return -1;
+	}
+	public int handleIndexUnderflow(TreeNode left,TreeNode right, TreeNode parent) {
+		
+		int indexInParent = parent.children.indexOf(left);
+		// key separating left and right
+		int middleKey = parent.getPairs().get(indexInParent).key;
+		
+		// merge
+		if(left.getPairs().size() + right.getPairs().size() <= this.m-1) {
+			
+			left.getPairs().add(new Pair(middleKey));
+			left.getPairs().addAll(right.getPairs());
+			
+			left.children.addAll(right.children);
+			
+			// delete right node
+			parent.children.remove(indexInParent+1);
+			return indexInParent; 
+		}
+		
+		// redistribute
+		if(left.getPairs().size() < Math.ceil(this.m/2.0)-1) { // if left is underflowed
+			// move middle key to left node
+			left.getPairs().add(new Pair(middleKey));
+			
+			//move leftmost key from right node to parent
+			parent.getPairs().add(indexInParent,right.getPairs().remove(0));
+			
+			//move leftmost child from right node to left node
+			left.children.add(right.children.remove(0));
+			
+		}else { // if right is underflowed
+			// move middle key to right node
+			right.getPairs().add(0, new Pair(middleKey));
+			
+			// move rightmost key from left to parent
+			parent.getPairs().add(indexInParent, left.getPairs().remove(left.getPairs().size()-1));
+			
+			// move rightmost child from left node to right node
+			right.children.add(0, left.children.remove(left.children.size()-1));
+		}
+		
+		return -1;
+		
+	}
 }
